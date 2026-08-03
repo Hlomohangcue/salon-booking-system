@@ -1,29 +1,11 @@
-// Core domain types — extended as features are implemented
-
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
-
-export interface Service {
-  id: string
-  name: string
-  description: string
-  durationMinutes: number
-  price: number
-}
+// Core domain types
+// Booking-specific types (Booking, Service, BookingStatus, etc.) have moved to:
+//   src/features/booking/types.ts
 
 export interface Staff {
   id: string
   name: string
   specialties: string[]
-}
-
-export interface Booking {
-  id: string
-  customerId: string
-  serviceId: string
-  staffId: string
-  dateTime: Date
-  status: BookingStatus
-  notes?: string
 }
 
 export interface User {
