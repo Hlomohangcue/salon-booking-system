@@ -117,4 +117,5 @@ export const FIRESTORE_COLLECTIONS = {
   BOOKINGS: 'bookings',
   SERVICES: 'services',
   SETTINGS: 'settings',
+  USERS: 'users',
 } as const

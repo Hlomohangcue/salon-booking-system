@@ -15,6 +15,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // -------------------------------------------------------------------------
+    // Helper: an authenticated user is an admin if their document in the
+    // `users` collection (keyed by Auth UID) has role == 'admin'.
+    // -------------------------------------------------------------------------
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // -------------------------------------------------------------------------
     // bookings - the customer-facing collection
     // -------------------------------------------------------------------------
     match /bookings/{bookingId} {
@@ -104,11 +114,11 @@ service cloud.firestore {
           'staffId',
           'branchId',
           'userId'
-        ]);
+]);
 
       // No client may update a booking. Status changes happen server-side or
-      // via a future authenticated admin (Phase 4). Timestamps are read-only.
-      allow update: if false;
+      // via an authenticated admin. Timestamps are read-only.
+      allow update: if isAdmin();
 
       // Bookings are immutable audit records - never client-deletable.
       allow delete: if false;
@@ -121,8 +131,8 @@ service cloud.firestore {
       // Public read - the wizard's ServiceStep fetches active services.
       allow read: if true;
 
-      // Writes are admin-only. No auth in Phase 2.3, so deny all client writes.
-      allow create, update, delete: if false;
+      // Writes are admin-only.
+      allow create, update, delete: if isAdmin();
     }
 
     // -------------------------------------------------------------------------
@@ -132,8 +142,8 @@ service cloud.firestore {
       // Public read of bookingConfig required by useAvailability().
       allow read: if true;
 
-      // Configuration is admin-managed. Deny all client writes.
-      allow create, update, delete: if false;
+      // Configuration is admin-managed.
+      allow create, update, delete: if isAdmin();
     }
 
     // -------------------------------------------------------------------------
@@ -141,7 +151,21 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
     match /holidays/{holidayId} {
       allow read: if true;
-      allow create, update, delete: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // users - admin accounts (keyed by Auth UID)
+    // -------------------------------------------------------------------------
+    match /users/{uid} {
+      // A user may read their own document (needed by AuthContext to
+      // determine their role). Admins may read all user documents.
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isAdmin());
+
+      // Only an admin may create or update user documents (provisioning).
+      // A user may not self-promote to admin.
+      allow create, update, delete: if isAdmin();
     }
 
     // -------------------------------------------------------------------------

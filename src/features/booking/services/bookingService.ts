@@ -97,10 +97,10 @@ async function readActiveBookingsForDate(
  * @returns The new Firestore document ID (used as the customer's booking reference)
  */
 export async function createBooking(formData: BookingFormValues): Promise<string> {
-// Normalise the phone number to E.164 before any lookup or write.
+  // Normalise the phone number to E.164 before any lookup or write.
   const phoneNumber = normalizePhone(formData.phoneNumber)
 
-// 1. Pre-read active bookings for the date to learn document IDs.
+  // 1. Pre-read active bookings for the date to learn document IDs.
   const preReadSnap = await readActiveBookingsForDate(formData.preferredDate)
 
   try {
@@ -187,15 +187,4 @@ export async function createBooking(formData: BookingFormValues): Promise<string
     // Always surface a BookingError with a stable code, never a raw Firebase error.
     throw toBookingError(error)
   }
-}
-
-/**
- * Cancel a booking by updating its status and recording the cancellation reason.
- * Phase 3.2: Implement with a field-level update (status, cancelledAt, cancellationReason only).
- */
-export async function cancelBooking(
-  _bookingId: string,
-  _reason: string,
-): Promise<void> {
-  throw new Error('[bookings] cancelBooking: not yet implemented')
 }
