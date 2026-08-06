@@ -15,7 +15,7 @@ export interface WizardData {
   notes: string
 }
 
-const TOTAL_STEPS = 6  // steps 0–5; step 5 = success
+const TOTAL_STEPS = 5  // Steps 0–4 (step 5 = SuccessStep, only reachable via showSuccess after Phase 3.3 write)
 
 export function useBooking() {
   const [step, setStep] = useState(0)
@@ -75,5 +75,10 @@ export function useBooking() {
     setData({})
   }, [])
 
-  return { step, data, canGoNext, goNext, goBack, selectService, selectDate, selectTime, setDetails, reset }
+  // Phase 3.3: call this only after a successful Firestore booking write
+  const showSuccess = useCallback(() => {
+    setStep(5)
+  }, [])
+
+  return { step, data, canGoNext, goNext, goBack, selectService, selectDate, selectTime, setDetails, reset, showSuccess }
 }

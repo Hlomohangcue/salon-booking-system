@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint src",
     "preview": "vite preview",
-    "seed": "tsx scripts/seedFirestore.ts"
+    "seed": "tsx scripts/seedFirestore.ts",
+    "deploy": "firebase deploy --only hosting,firestore"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

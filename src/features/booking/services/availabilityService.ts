@@ -2,6 +2,14 @@ import { db } from '../../../lib/firebase'
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 import type { Service, BookingConfig } from '../types'
 import { FIRESTORE_COLLECTIONS } from '../types'
+import { generateAvailableSlots } from '../utils/slotGenerator'
+
+/** Result of an availability check. */
+export interface AvailabilityResult {
+  available: boolean
+  /** When false, a short human-readable explanation of why the slot is unavailable. */
+  reason?: string
+}
 
 /**
  * Fetch all active services from Firestore, sorted by sortOrder ascending.
@@ -53,18 +61,38 @@ export async function getBookedSlots(date: string): Promise<string[]> {
 /**
  * Check whether a specific slot is available for a given date and service duration.
  *
- * Phase 3.2 implementation plan:
- *   1. Call getBookingConfig() for openingHours and minAdvanceHours
- *   2. Call getBookedSlots(date) to get current active bookings
- *   3. Pass both to generateAvailableSlots() and check if `time` is in the result
+ * Uses the existing booking configuration and slot-generation utilities to
+ * account for opening hours, holidays, the advance booking window, the service
+ * duration, and already-booked slots.
  *
- * IMPORTANT: This must also be verified inside the createBooking() Firestore transaction
- * to protect against race conditions on the last available slot.
+ * IMPORTANT: This must also be verified inside the createBooking() Firestore
+ * transaction to protect against race conditions on the last available slot.
+ *
+ * @param date - ISO date string "YYYY-MM-DD"
+ * @param time - 24-hour "HH:MM" start time being requested
+ * @param serviceDurationMins - length of the service in minutes
  */
 export async function checkAvailability(
-  _date: string,
-  _time: string,
-  _serviceDurationMins: number,
-): Promise<boolean> {
-  throw new Error('[bookings] checkAvailability: not yet implemented')
+  date: string,
+  time: string,
+  serviceDurationMins: number,
+): Promise<AvailabilityResult> {
+  const config = await getBookingConfig()
+  const bookedSlots = await getBookedSlots(date)
+
+  const availableSlots = generateAvailableSlots({
+    date,
+    config,
+    serviceDurationMins,
+    bookedSlots,
+  })
+
+  if (!availableSlots.includes(time)) {
+    return {
+      available: false,
+      reason: 'That time slot is no longer available. Please choose another time.',
+    }
+  }
+
+  return { available: true }
 }

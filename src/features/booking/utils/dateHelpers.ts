@@ -102,3 +102,25 @@ export function addMinutesToTime(timeStr: string, minutesToAdd: number): string 
   if (total >= 24 * 60) return null
   return minutesToTime(total)
 }
+
+// Reuse a single formatter instance for performance
+const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+/** Format "YYYY-MM-DD" as "Monday, 5 August 2026" for human-readable display. */
+export function formatDisplayDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return DISPLAY_DATE_FORMATTER.format(new Date(year, month - 1, day))
+}
+
+/** Convert a "HH:MM" 24-hour string to "9:00 AM" / "1:30 PM" format. */
+export function formatTime12h(timeStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`
+}

@@ -12,6 +12,7 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
   onClick?: () => void
+  title?: string
 }
 
 const VARIANT: Record<Variant, string> = {
@@ -39,6 +40,7 @@ export default function Button({
   type = 'button',
   disabled,
   onClick,
+  title,
 }: ButtonProps) {
   const classes = [
     'inline-flex items-center justify-center rounded-lg font-semibold transition-colors focus-visible:outline',
@@ -57,7 +59,7 @@ export default function Button({
   }
 
   return (
-    <button type={type} className={classes} disabled={disabled} onClick={onClick}>
+    <button type={type} className={classes} disabled={disabled} onClick={onClick} title={title}>
       {children}
     </button>
   )

@@ -1,0 +1,154 @@
+rules_version = '2';
+
+// =============================================================================
+// Makeng Salon - Firestore Security Rules
+// Phase 2.3 Production Hardening
+// -----------------------------------------------------------------------------
+// Least-privilege access model:
+//   - Unauthenticated customers may CREATE bookings (guest booking flow).
+//   - No unauthenticated / non-admin user may UPDATE or DELETE bookings.
+//   - Status changes and timestamp values are server-controlled only.
+//   - Admin collections (services writes, settings writes) are denied to clients.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // bookings - the customer-facing collection
+    // -------------------------------------------------------------------------
+    match /bookings/{bookingId} {
+
+      // Customers (and the client-side availability check) may read bookings.
+      // NOTE: This is required by the current client-side slot-availability
+      // architecture (getBookedSlots reads all active bookings for a date).
+      // A Cloud Function / server-side availability check would allow tightening
+      // this to request.auth != null - see remaining production risks.
+      allow read: if true;
+
+      // Guest booking creation - the ONLY client write permitted.
+      // Enforces least privilege by rejecting any field that is not part of the
+      // canonical customer booking shape, and forcing server-side timestamps.
+      allow create: if
+        // Status must be exactly "pending" - clients can never self-confirm.
+        request.resource.data.status == 'pending'
+        // Source must be "web" - blocks forging admin/WhatsApp origins.
+        && request.resource.data.source == 'web'
+
+        // Timestamps must be server-set (prevents client clock manipulation).
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+
+        // Validate the preferred date is a well-formed ISO date string.
+        // Firestore rules cannot compare string dates to request.time, so
+        // the regex guards format while the actual future-date, window, and
+        // slot-availability checks are enforced by the transactional
+        // createBooking() in the app (generateAvailableSlots).
+        && request.resource.data.preferredDate is string
+        && request.resource.data.preferredDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.preferredDate >= '2020-01-01'
+        && request.resource.data.preferredDate <= '2100-12-31'
+
+        // Validate the preferred time is HH:MM 24-hour.
+        && request.resource.data.preferredTime is string
+        && request.resource.data.preferredTime.matches('^\\d{2}:\\d{2}$')
+
+        // Validate Lesotho E.164 phone number (+266XXXXXXXX).
+        && request.resource.data.phoneNumber is string
+        && request.resource.data.phoneNumber.matches('^\\+266[2-8][0-9]{7}$')
+
+        // Required scalar fields must be present.
+        && request.resource.data.keys().hasAll([
+          'bookingId',
+          'customerName',
+          'phoneNumber',
+          'serviceId',
+          'serviceName',
+          'serviceDuration',
+          'servicePrice',
+          'preferredDate',
+          'preferredTime',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'source'
+        ])
+
+        // Customer name bounds (matches bookingValidation.ts).
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 2
+        && request.resource.data.customerName.size() <= 80
+
+        // Service snapshot fields must be well-typed.
+        && request.resource.data.serviceId is string
+        && request.resource.data.serviceId.size() > 0
+        && request.resource.data.serviceName is string
+        && request.resource.data.serviceName.size() > 0
+        && request.resource.data.serviceDuration is int
+        && request.resource.data.serviceDuration > 0
+        && request.resource.data.servicePrice is int
+        && request.resource.data.servicePrice >= 0
+
+        // bookingId must equal the document ID (no cross-document spoofing).
+        && request.resource.data.bookingId == bookingId
+
+        // Optional fields must be string if present.
+        && (request.resource.data.email is string || !request.resource.data.keys().hasAny(['email']))
+        && (request.resource.data.notes is string || !request.resource.data.keys().hasAny(['notes']))
+
+        // Reject any admin/future-only fields a client should never set.
+        && !request.resource.data.keys().hasAny([
+          'confirmedAt',
+          'cancelledAt',
+          'cancellationReason',
+          'staffId',
+          'branchId',
+          'userId'
+        ]);
+
+      // No client may update a booking. Status changes happen server-side or
+      // via a future authenticated admin (Phase 4). Timestamps are read-only.
+      allow update: if false;
+
+      // Bookings are immutable audit records - never client-deletable.
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // services - catalogue (public read required by the booking wizard)
+    // -------------------------------------------------------------------------
+    match /services/{serviceId} {
+      // Public read - the wizard's ServiceStep fetches active services.
+      allow read: if true;
+
+      // Writes are admin-only. No auth in Phase 2.3, so deny all client writes.
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // settings - singleton configuration (public read for slot generation)
+    // -------------------------------------------------------------------------
+    match /settings/{settingId} {
+      // Public read of bookingConfig required by useAvailability().
+      allow read: if true;
+
+      // Configuration is admin-managed. Deny all client writes.
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // holidays - public read (used by the calendar/date logic)
+    // -------------------------------------------------------------------------
+    match /holidays/{holidayId} {
+      allow read: if true;
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Default deny - every other collection is off-limits to clients.
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -65,6 +65,8 @@ export interface Booking {
   serviceName: string
   /** Snapshot of service duration at booking time */
   serviceDuration: number
+  /** Snapshot of service price at booking time — survives future service edits */
+  servicePrice: number
   /** ISO date string "YYYY-MM-DD" — avoids Timestamp timezone drift */
   preferredDate: string
   /** 24-hour time string "HH:MM" */

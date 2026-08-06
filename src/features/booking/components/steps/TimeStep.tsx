@@ -1,4 +1,5 @@
 import Button from '../../../../components/ui/Button'
+import { formatDisplayDate, formatTime12h } from '../../utils/dateHelpers'
 
 interface TimeStepProps {
   slots: string[]
@@ -12,13 +13,6 @@ interface TimeStepProps {
   onBack: () => void
 }
 
-function format12h(timeStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number)
-  const period = h >= 12 ? 'PM' : 'AM'
-  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`
-}
-
 export default function TimeStep({
   slots,
   loading,
@@ -30,18 +24,6 @@ export default function TimeStep({
   onNext,
   onBack,
 }: TimeStepProps) {
-  const MONTH_NAMES = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ]
-  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-  function formatDisplayDate(dateStr: string): string {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    const d = new Date(year, month - 1, day)
-    return `${DAY_NAMES[d.getDay()]}, ${day} ${MONTH_NAMES[month - 1]} ${year}`
-  }
-
   return (
     <div>
       <h2 className="font-display text-2xl font-semibold text-gray-900 mb-1">Select a Time</h2>
@@ -88,7 +70,7 @@ export default function TimeStep({
                     : 'border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50',
                 ].join(' ')}
               >
-                {format12h(slot)}
+                {formatTime12h(slot)}
               </button>
             )
           })}

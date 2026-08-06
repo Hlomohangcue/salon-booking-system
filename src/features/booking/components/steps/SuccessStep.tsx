@@ -2,9 +2,11 @@ import Button from '../../../../components/ui/Button'
 
 interface SuccessStepProps {
   onReset: () => void
+  /** The Firestore document ID returned by createBooking(), used as the booking reference. */
+  bookingId: string | null
 }
 
-export default function SuccessStep({ onReset }: SuccessStepProps) {
+export default function SuccessStep({ onReset, bookingId }: SuccessStepProps) {
   return (
     <div className="text-center py-8">
       {/* Icon */}
@@ -15,20 +17,27 @@ export default function SuccessStep({ onReset }: SuccessStepProps) {
       </div>
 
       <h2 className="font-display text-2xl font-semibold text-gray-900 mb-3">
-        You&rsquo;re Almost There!
+        Booking Confirmed
       </h2>
 
       <p className="text-gray-500 text-sm max-w-sm mx-auto mb-2">
-        Your booking details have been captured successfully.
+        Your appointment has been booked successfully.
       </p>
 
-      {/* Phase 3.3 notice */}
-      <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-4 py-2 rounded-full mt-2 mb-8">
-        <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
-        </svg>
-        Firestore submission will be completed in Phase 3.3
-      </div>
+      {/* Booking reference */}
+      {bookingId && (
+        <div className="inline-flex flex-col items-center gap-1 bg-purple-50 border border-purple-200 text-purple-800 px-6 py-4 rounded-xl mt-2 mb-8">
+          <span className="text-xs font-semibold uppercase tracking-wide text-purple-500">
+            Booking Reference
+          </span>
+          <span className="font-mono text-lg font-semibold break-all">{bookingId}</span>
+        </div>
+      )}
+
+      <p className="text-gray-500 text-xs max-w-sm mx-auto mb-8">
+        Please keep this booking reference. It may be required if you need to
+        reschedule or cancel your appointment.
+      </p>
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button to="/contact" variant="outline">

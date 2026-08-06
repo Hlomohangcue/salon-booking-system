@@ -75,7 +75,7 @@ In the Firebase console: Firestore Database → Rules → set to test mode for d
 
 > **Security rules for production** are documented in `docs/FIRESTORE_SECURITY.md`.
 
-### Resetting Development Data
+## Resetting Development Data
 
 Re-running `npm run seed` overwrites all seeded documents with fresh defaults (document IDs are stable). To fully reset:
 1. In the Firebase console, delete the `services`, `settings`, and `holidays` collections.
@@ -90,6 +90,25 @@ Re-running `npm run seed` overwrites all seeded documents with fresh defaults (d
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Run Oxlint |
 | `npm run seed` | Seed Firestore with development data |
+| `npm run deploy` | Deploy hosting + Firestore rules + indexes (requires Firebase CLI) |
+
+## Performance
+
+The app uses **route-level code splitting** (`React.lazy` + `Suspense`), so each page is fetched
+on demand. The initial shell bundles only the shared UI and routing (≈ 293 kB / 93 kB gzip), while
+heavier pages such as the booking wizard (which loads the Firebase SDK) are deferred until visited.
+
+## Deployment
+
+The project is configured for **Firebase Hosting + Cloud Firestore**:
+
+- `firebase.json` — hosting config (SPA rewrite, caching, security headers) + Firestore rules/indexes
+- `.firebaserc` — default project (`saloon-booking-ace4f`)
+- `firestore.rules` — production Firestore security rules (least-privilege)
+- `firestore.indexes.json` — required composite indexes for the booking queries
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full deployment guide, including DNS/SSL setup,
+pre-deployment checks, and rollout steps.
 
 ## Environment Variables
 
@@ -98,15 +117,26 @@ All required variables are documented in `.env.example`. Copy it to `.env` and p
 ## Project Structure
 
 ```
+index.html
+vite.config.ts            # Vite config (React + Tailwind v4 plugins)
+firebase.json             # Firebase Hosting + Firestore rules/indexes config
+.firebaserc               # Default Firebase project
+firestore.rules           # Production Firestore security rules
+firestore.indexes.json    # Composite indexes for booking queries
+DEPLOYMENT.md             # Deployment guide (hosting, DNS/SSL, rollout)
 src/
+├── router.tsx            # Routes with lazy-loaded (code-split) pages
 ├── components/
-│   ├── layout/          # Navbar, Footer, Layout wrapper
-│   └── ui/              # Reusable UI components (Button, Card, Container, SectionTitle)
+│   ├── layout/           # Navbar, Footer, Layout wrapper
+│   └── ui/               # Button, Card, Container, SectionTitle, PageFallback
 ├── features/
-│   └── booking/         # Booking feature module
-│       ├── services/    # Firestore read/write functions
-│       ├── utils/       # Validation, date helpers, slot generator
-│       └── types.ts     # Booking-specific TypeScript types
+│   └── booking/          # Booking feature module
+│       ├── components/   # BookingWizard + step components
+│       ├── hooks/        # useBooking, useServices, useAvailability, useSubmitBooking
+│       ├── services/     # Firestore read/write functions
+│       ├── utils/        # Validation, date helpers, slot generator
+│       ├── errors/       # Typed booking errors
+│       └── types.ts      # Booking-specific TypeScript types
 ├── pages/               # Route-level page components
 ├── lib/                 # Firebase initialisation
 └── types/               # Shared TypeScript type definitions
