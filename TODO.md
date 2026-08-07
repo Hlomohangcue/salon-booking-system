@@ -1,12 +1,13 @@
-# Phase 3.2 — Booking Management
+# Phase 3.3 — Services Management
 
 ## Steps
-- [x] 0. Plan approved (admin service keeps booking management out of customer-facing bookingService)
-- [x] 1. Create `src/features/admin/services/adminBookingService.ts` (explicit methods: getAllBookings, getBookingsByDate, confirmBooking, cancelBooking, completeBooking, markNoShow)
-- [x] 2. Create `src/features/admin/hooks/useAdminBookings.ts`
-- [x] 3. Create `src/features/admin/hooks/useAdminDashboard.ts`
-- [x] 4. Create `src/features/admin/components/BookingDetailPanel.tsx`
-- [x] 5. Rewrite `src/features/admin/pages/AdminBookingsPage.tsx` (search, date filter, status filter, sorting, states, detail)
-- [x] 6. Rewrite `src/features/admin/pages/AdminDashboardPage.tsx` (live stats, recent bookings, upcoming today)
-- [x] 7. Remove unused customer-facing `cancelBooking` stub from `bookingService.ts`
-- [x] 8. Verify: `tsc -b`, `oxlint src`, `npm run build`
+- [x] 0. Investigate existing service model + architecture (Service interface, services collection, availabilityService, seed shape, firestore rules)
+- [x] 1. Create `src/features/admin/services/serviceValidation.ts` (Zod schema, ServiceFormValues, category options)
+- [x] 2. Create `src/features/admin/services/adminServiceService.ts` (explicit methods: getServices, getService, createService, updateService, archiveService, restoreService, deleteService, getServiceUsage)
+- [x] 3. Create `src/features/admin/hooks/useAdminServices.ts`
+- [x] 4. Create `src/features/admin/components/Dialog.tsx` (accessible modal: focus trap, Escape, overlay click, aria)
+- [x] 5. Create `src/features/admin/components/ServiceForm.tsx` (React Hook Form + Zod)
+- [x] 6. Create `src/features/admin/components/ServiceTable.tsx`
+- [x] 7. Create `src/features/admin/components/DeleteServiceDialog.tsx`
+- [x] 8. Rewrite `src/features/admin/pages/AdminServicesPage.tsx` (search, category/status filters, states, create/edit/archive/restore/delete)
+- [x] 9. Verify: `tsc -b`, `oxlint src`, `npm run build`
