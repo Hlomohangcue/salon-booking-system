@@ -31,6 +31,21 @@ export interface BookingConfig {
   maxBookingsPerSlot: number
   /** ISO date strings "YYYY-MM-DD" — holidays and special closed days */
   holidays: string[]
+  /**
+   * Buffer minutes enforced between appointments (Phase 3.7).
+   * When undefined, no buffer is applied (backward compatible).
+   */
+  bufferBetweenAppointmentsMins?: number
+  /**
+   * Maximum allowed bookings per day (Phase 3.7).
+   * When undefined, no per-day cap is applied (backward compatible).
+   */
+  maxBookingsPerDay?: number
+  /**
+   * "HH:MM" after which same-day bookings are cut off (Phase 3.7).
+   * When undefined, no same-day cutoff is applied (backward compatible).
+   */
+  sameDayCutoffTime?: string
 }
 
 // ─── Service — stored at services/{serviceId} ───────────────────────────────
@@ -80,6 +95,7 @@ export interface Booking {
   branchId?: string
   confirmedAt?: Date
   cancelledAt?: Date
+  completedAt?: Date
   cancellationReason?: string
   source: BookingSource
 }
@@ -89,11 +105,41 @@ export interface Booking {
  * Timestamp fields are converted to Date by fromFirestore() in bookingService.ts.
  */
 export interface BookingDocument
-  extends Omit<Booking, 'createdAt' | 'updatedAt' | 'confirmedAt' | 'cancelledAt'> {
+  extends Omit<
+    Booking,
+    'createdAt' | 'updatedAt' | 'confirmedAt' | 'cancelledAt' | 'completedAt'
+  > {
   createdAt: Timestamp
   updatedAt: Timestamp
   confirmedAt?: Timestamp
   cancelledAt?: Timestamp
+  completedAt?: Timestamp
+}
+
+// ─── Customer — stored at customers/{phoneNumber} ───────────────────────────
+
+export interface Customer {
+  /** Same as the Firestore document ID — the E.164 phone number. */
+  customerId: string
+  customerName: string
+  /** E.164 format: +266XXXXXXXX (Lesotho) */
+  phoneNumber: string
+  email?: string
+  /** When true the customer is hidden from the active admin list. */
+  archived: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Raw shape of a Customer document as received from Firestore.
+ * Timestamp fields are converted to Date by fromFirestore() in
+ * adminCustomerService.ts.
+ */
+export interface CustomerDocument
+  extends Omit<Customer, 'createdAt' | 'updatedAt'> {
+  createdAt: Timestamp
+  updatedAt: Timestamp
 }
 
 // ─── Booking form values — used by the wizard (Phase 3.2) ──────────────────
@@ -118,4 +164,5 @@ export const FIRESTORE_COLLECTIONS = {
   SERVICES: 'services',
   SETTINGS: 'settings',
   USERS: 'users',
+  CUSTOMERS: 'customers',
 } as const

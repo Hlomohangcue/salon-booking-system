@@ -29,6 +29,7 @@ function fromFirestore(data: BookingDocument): Booking {
     updatedAt: data.updatedAt.toDate(),
     confirmedAt: data.confirmedAt?.toDate(),
     cancelledAt: data.cancelledAt?.toDate(),
+    completedAt: data.completedAt?.toDate(),
   } as Booking
 }
 

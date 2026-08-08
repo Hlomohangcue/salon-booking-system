@@ -35,6 +35,7 @@ function fromFirestore(data: BookingDocument): Booking {
     updatedAt: data.updatedAt.toDate(),
     confirmedAt: data.confirmedAt?.toDate(),
     cancelledAt: data.cancelledAt?.toDate(),
+    completedAt: data.completedAt?.toDate(),
   } as Booking
 }
 
@@ -101,7 +102,9 @@ export async function cancelBooking(
 
 /** Mark a booking as completed. */
 export async function completeBooking(bookingId: string): Promise<void> {
-  await setBookingStatus(bookingId, 'completed')
+  await setBookingStatus(bookingId, 'completed', {
+    completedAt: serverTimestamp(),
+  })
 }
 
 /** Mark a booking as a no-show. */
