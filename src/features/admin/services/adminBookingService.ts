@@ -2,6 +2,7 @@ import { db } from '../../../lib/firebase'
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   updateDoc,
   query,
@@ -14,7 +15,9 @@ import {
   type BookingDocument,
   type BookingStatus,
 } from '../../booking/types'
+import { fromFirestore } from '../../booking/services/bookingConverter'
 import { BookingError, toBookingError } from '../../booking/errors/bookingErrors'
+import { assertCanTransition } from '../../booking/utils/bookingStateMachine'
 
 /**
  * Admin booking management service.
@@ -26,18 +29,6 @@ import { BookingError, toBookingError } from '../../booking/errors/bookingErrors
  * The customer-facing create flow remains in
  * `src/features/booking/services/bookingService.ts` and is untouched.
  */
-
-// Converts raw Firestore Timestamps to JavaScript Date objects.
-function fromFirestore(data: BookingDocument): Booking {
-  return {
-    ...data,
-    createdAt: data.createdAt.toDate(),
-    updatedAt: data.updatedAt.toDate(),
-    confirmedAt: data.confirmedAt?.toDate(),
-    cancelledAt: data.cancelledAt?.toDate(),
-    completedAt: data.completedAt?.toDate(),
-  } as Booking
-}
 
 /**
  * Fetch all bookings, newest first. Sorting is client-facing convenience; the
@@ -64,7 +55,10 @@ export async function getBookingsByDate(date: string): Promise<Booking[]> {
 
 /**
  * Applies a status transition to a booking, updating status and timestamps.
- * Respects the security rule that only admins may update bookings.
+ *
+ * Reads the booking's current status and validates the transition against the
+ * booking state machine before writing. Respects the security rule that only
+ * admins may update bookings.
  */
 async function setBookingStatus(
   bookingId: string,
@@ -72,6 +66,20 @@ async function setBookingStatus(
   extra: Record<string, unknown> = {},
 ): Promise<void> {
   const ref = doc(db, FIRESTORE_COLLECTIONS.BOOKINGS, bookingId)
+
+  // Read the current status so we can validate the transition.
+  const currentSnap = await getDoc(ref)
+  if (!currentSnap.exists()) {
+    throw new Error(`Booking ${bookingId} was not found.`)
+  }
+  const currentStatus = (currentSnap.data() as { status?: BookingStatus })
+    .status
+  if (!currentStatus) {
+    throw new Error(`Booking ${bookingId} has no status.`)
+  }
+
+  assertCanTransition(currentStatus, status)
+
   await updateDoc(ref, {
     status,
     updatedAt: serverTimestamp(),

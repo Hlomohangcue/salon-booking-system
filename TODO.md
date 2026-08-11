@@ -1,18 +1,15 @@
-# Recovery — Restore Phase 3.7 verified state
-
-## Context
-A `git checkout HEAD -- .` recovery reverted several tracked files to the
-Phase 3.3 commit, losing the Phase 3.4–3.7 additions those files carried. The
-untracked Phase 3.4–3.7 modules (Customers, Reports, Settings) depend on those
-additions, so the project no longer compiles. This task restores only the
-tracked integration points that were reverted — no new functionality.
+# Phase 5.0 — Comprehensive Testing, Quality Assurance & Production Readiness
 
 ## Steps
-- [x] 0. Analyse lost changes + plan approved (reconstruct 4 tracked files)
-- [x] 1. Create safety branch `recovery-phase37`
-- [x] 2. Restore `src/features/booking/types.ts` (completedAt, Customer/CustomerDocument, FIRESTORE_COLLECTIONS.CUSTOMERS, 3 optional BookingConfig fields)
-- [x] 3. Restore `src/features/booking/utils/slotGenerator.ts` (Phase 3.7 enforcement points)
-- [x] 4. Restore `src/features/booking/services/bookingService.ts` (completedAt in fromFirestore)
-- [x] 5. Restore `src/features/admin/services/adminBookingService.ts` (completedAt in fromFirestore + completeBooking)
-- [x] 6. Verify: `npx tsc -b`, `npx oxlint src`, `npm run build` (all pass)
+- [x] 1. Testing infrastructure (vitest.config.ts, src/test/setup.ts, package.json scripts)
+- [x] 2. Test utilities (src/test/mocks, fixtures, utils, renderWithProviders)
+- [ ] 3. Booking engine tests (slotGenerator.ts)
+- [ ] 4. Reports tests (adminReportsService.ts)
+- [ ] 5. Validation tests (booking/settings/services/customers Zod schemas)
+- [ ] 6. Booking state machine tests (bookingStateMachine.ts)
+- [ ] 7. Firestore converter tests (bookingConverter.ts)
+- [ ] 8. Hook tests (useAvailability, useSubmitBooking, useAdminBookings, useAdminDashboard, useAdminCustomers, useAdminReports, useAdminSettings)
+- [ ] 9. Component tests (Dialog, DataTable, BookingWizard, BookingDetailPanel, Settings Forms, Reports Charts, AdminLogin, ErrorBoundary)
+- [ ] 10. Coverage configuration (critical 95-100%, overall >=85%, HTML report)
+- [ ] 11. Verify: npm test, npm run test:coverage, npx tsc -b, npx oxlint src, npm run build
 </content>

@@ -95,6 +95,7 @@ export default function AdminBookingsPage() {
       {
         key: 'customer',
         header: 'Customer',
+        sortable: true,
         cell: (row) => (
           <span className="font-medium text-gray-900">{row.customerName}</span>
         ),
@@ -107,11 +108,13 @@ export default function AdminBookingsPage() {
       {
         key: 'date',
         header: 'Date',
+        sortable: true,
         cell: (row) => formatDisplayDate(row.preferredDate),
       },
       {
         key: 'time',
         header: 'Time',
+        sortable: true,
         cell: (row) => formatTime12h(row.preferredTime),
       },
       {
@@ -141,6 +144,21 @@ export default function AdminBookingsPage() {
     ],
     [setSelectedId],
   )
+
+  // Map the sort key to the matching column key so `aria-sort` lands on the
+  // correct header (e.g. sorting by `preferredDate` highlights the Date column).
+  const sortColumnKey = useMemo(() => {
+    switch (sortKey) {
+      case 'preferredDate':
+        return 'date'
+      case 'preferredTime':
+        return 'time'
+      case 'customerName':
+        return 'customer'
+      default:
+        return undefined
+    }
+  }, [sortKey])
 
   return (
     <div className="space-y-6">
@@ -223,6 +241,7 @@ export default function AdminBookingsPage() {
               columns={columns}
               rows={filtered}
               rowKey={(row) => row.bookingId}
+              sortBy={sortColumnKey}
               empty={
                 <EmptyState
                   title="No bookings found"

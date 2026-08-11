@@ -4,11 +4,11 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth'
+import type { User as FirebaseUser } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { auth, db } from '../../lib/firebase'
+import { db } from '../../lib/firebase'
 import { FIRESTORE_COLLECTIONS } from '../booking/types'
-import { signInAdmin, signOutAdmin } from './services/authService'
+import { onAuthChange, signInAdmin, signOutAdmin } from './services/authService'
 import { AuthContext, type AuthContextValue } from './context'
 import type { AdminUser, AdminUserDocument } from './types'
 
@@ -22,9 +22,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
   const [initializing, setInitializing] = useState(true)
 
-  // Subscribe to Firebase Auth state
+// Subscribe to Firebase Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthChange((user) => {
       setFirebaseUser(user)
       setAdminUser(null)
       setInitializing(false)

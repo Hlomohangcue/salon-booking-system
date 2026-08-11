@@ -15,6 +15,8 @@ export interface DataTableColumn<T> {
   cell: (row: T) => ReactNode
   /** Optional class applied to the cell. */
   className?: string
+  /** When true the header is rendered with `aria-sort` support. */
+  sortable?: boolean
 }
 
 interface DataTableProps<T> {
@@ -26,6 +28,13 @@ interface DataTableProps<T> {
   rowKey: (row: T) => string
   /** Optional empty state — an EmptyState component. */
   empty?: ReactNode
+  /**
+   * The key of the currently sorted column. When provided and matches a
+   * column's `key`, that header receives an `aria-sort` attribute.
+   */
+  sortBy?: string
+  /** Sort direction for the active column. */
+  sortDirection?: 'ascending' | 'descending'
 }
 
 const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string> = {
@@ -48,6 +57,8 @@ export default function DataTable<T>({
   rows,
   rowKey,
   empty,
+  sortBy,
+  sortDirection = 'ascending',
 }: DataTableProps<T>) {
   if (rows.length === 0) {
     return <>{empty}</>
@@ -58,18 +69,22 @@ export default function DataTable<T>({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-100">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                scope="col"
-                className={[
-                  'py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-400',
-                  ALIGN_CLASS[col.align ?? 'left'],
-                ].join(' ')}
-              >
-                {col.header}
-              </th>
-            ))}
+            {columns.map((col) => {
+              const isActive = col.sortable && col.key === sortBy
+              return (
+                <th
+                  key={col.key}
+                  scope="col"
+                  aria-sort={isActive ? sortDirection : undefined}
+                  className={[
+                    'py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-400',
+                    ALIGN_CLASS[col.align ?? 'left'],
+                  ].join(' ')}
+                >
+                  {col.header}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">

@@ -14,24 +14,13 @@ import {
 } from 'firebase/firestore'
 import type { Booking, BookingFormValues, BookingDocument } from '../types'
 import { FIRESTORE_COLLECTIONS } from '../types'
+import { fromFirestore } from './bookingConverter'
 import { generateAvailableSlots } from '../utils/slotGenerator'
 import { normalizePhone } from '../utils/dateHelpers'
 import {
   throwBookingError,
   toBookingError,
 } from '../errors/bookingErrors'
-
-// Converts raw Firestore Timestamps to JavaScript Date objects
-function fromFirestore(data: BookingDocument): Booking {
-  return {
-    ...data,
-    createdAt: data.createdAt.toDate(),
-    updatedAt: data.updatedAt.toDate(),
-    confirmedAt: data.confirmedAt?.toDate(),
-    cancelledAt: data.cancelledAt?.toDate(),
-    completedAt: data.completedAt?.toDate(),
-  } as Booking
-}
 
 /**
  * Fetch a single booking by its Firestore document ID.

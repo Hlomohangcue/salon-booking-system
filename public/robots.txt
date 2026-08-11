@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Admin area is not indexed
+Disallow: /admin
+
+Sitemap: https://makengsalon.com/sitemap.xml

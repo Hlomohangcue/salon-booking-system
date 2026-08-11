@@ -1,0 +1,17 @@
+{
+  "name": "Makeng Salon",
+  "short_name": "Makeng Salon",
+  "description": "Premium hair and beauty services. Book your appointment online.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import Container from '../../components/ui/Container'
 import Button from '../../components/ui/Button'
 import { useAuth } from '../../features/auth/hooks/useAuth'
+import { setSessionPersistence, sendPasswordReset } from '../../features/auth/services/authService'
 import type { LoginFormValues } from '../../features/auth/types'
 
 const loginSchema = z.object({
@@ -24,10 +25,14 @@ export default function AdminLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState<string | null>(null)
+  const [remember, setRemember] = useState(true)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetSubmitting, setResetSubmitting] = useState(false)
 
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,7 +46,10 @@ export default function AdminLoginPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null)
+    setResetSent(false)
     try {
+      // Apply the chosen persistence level BEFORE signing in.
+      await setSessionPersistence(remember)
       await signIn(values.email, values.password)
       const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname
       navigate(from ?? '/admin', { replace: true })
@@ -49,6 +57,25 @@ export default function AdminLoginPage() {
       setError('Invalid email or password. Please try again.')
     }
   })
+
+  const handleForgotPassword = async () => {
+    const email = getValues('email')
+    setResetSent(false)
+    setError(null)
+    if (!email || !z.string().email().safeParse(email).success) {
+      setError('Enter a valid email address to reset your password.')
+      return
+    }
+    setResetSubmitting(true)
+    try {
+      await sendPasswordReset(email)
+      setResetSent(true)
+    } catch {
+      setError('We could not send a reset email. Check the address and try again.')
+    } finally {
+      setResetSubmitting(false)
+    }
+  }
 
   return (
     <>
@@ -81,6 +108,16 @@ export default function AdminLoginPage() {
                 role="alert"
               >
                 {error}
+              </div>
+            )}
+
+            {resetSent && (
+              <div
+                className="rounded-lg bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-700 mb-6"
+                role="status"
+              >
+                If an account exists for that email, a password reset link has
+                been sent. Please check your inbox.
               </div>
             )}
 
@@ -124,6 +161,26 @@ export default function AdminLoginPage() {
                       {errors.password.message}
                     </p>
                   )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-purple-700 focus:ring-purple-500"
+                    />
+                    Remember me
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={resetSubmitting}
+                    className="text-sm font-medium text-purple-700 hover:text-purple-800 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 disabled:opacity-50"
+                  >
+                    {resetSubmitting ? 'Sending...' : 'Forgot password?'}
+                  </button>
                 </div>
               </div>
 
