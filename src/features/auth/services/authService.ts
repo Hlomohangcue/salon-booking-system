@@ -12,44 +12,72 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { FIRESTORE_COLLECTIONS } from '../../booking/types'
-import type { AdminUser, AdminUserDocument } from '../types'
+import type { AdminUser } from '../types'
 
 /**
  * Sign in an admin with email + password credentials.
- * Throws on invalid credentials or network errors.
  */
 export async function signInAdmin(
   email: string,
   password: string,
 ): Promise<FirebaseUser> {
-  const credential = await signInWithEmailAndPassword(auth, email, password)
-  return credential.user
+  console.log('[AUTH] signInAdmin: starting...')
+  console.log('[AUTH] Email:', email)
+
+  try {
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    )
+
+    console.log('[AUTH] signInAdmin: Firebase login successful')
+    console.log('[AUTH] UID:', credential.user.uid)
+
+    return credential.user
+  } catch (error) {
+    console.error('[AUTH] signInAdmin: Firebase login failed:', error)
+    throw error
+  }
 }
 
-/** Sign out the current user. */
+/**
+ * Sign out the current user.
+ */
 export async function signOutAdmin(): Promise<void> {
   await signOut(auth)
 }
 
 /**
- * Configure session persistence BEFORE signing in.
- *
- * - `true`  → browserLocalPersistence (survives browser restart — "remember me")
- * - `false` → browserSessionPersistence (cleared when the tab closes)
- *
- * Call this before `signInAdmin` to apply the chosen persistence level. The
- * Firebase default is browserLocalPersistence, so this is only needed when the
- * user unchecks "remember me".
+ * Configure session persistence before signing in.
  */
-export async function setSessionPersistence(remember: boolean): Promise<Persistence> {
-  const target = remember ? browserLocalPersistence : browserSessionPersistence
-  await setPersistence(auth, target)
-  return target
+export async function setSessionPersistence(
+  remember: boolean,
+): Promise<Persistence> {
+  const target = remember
+    ? browserLocalPersistence
+    : browserSessionPersistence
+
+  console.log('[AUTH] setSessionPersistence: starting...')
+  console.log('[AUTH] remember:', remember)
+
+  try {
+    await setPersistence(auth, target)
+
+    console.log('[AUTH] setSessionPersistence: successful')
+
+    return target
+  } catch (error) {
+    console.error(
+      '[AUTH] setSessionPersistence: failed:',
+      error,
+    )
+    throw error
+  }
 }
 
 /**
- * Send a password-reset email to the given address.
- * Throws if the email is not associated with an account.
+ * Send a password-reset email.
  */
 export async function sendPasswordReset(
   email: string,
@@ -58,30 +86,43 @@ export async function sendPasswordReset(
 }
 
 /**
- * Return the currently signed-in Firebase user, or null.
- * This is a one-shot read; use `onAuthStateChanged` for live updates.
+ * Return the currently signed-in Firebase user.
  */
 export function getCurrentUser(): FirebaseUser | null {
   return auth.currentUser
 }
 
 /**
- * Subscribe to auth state changes. Returns an unsubscribe function.
- * This is what AuthContext uses to keep the app in sync.
+ * Subscribe to auth state changes.
  */
 export function onAuthChange(
   callback: (user: FirebaseUser | null) => void,
 ): () => void {
-  return onAuthStateChanged(auth, callback)
+  console.log('[AUTH] Registering auth state listener...')
+
+  return onAuthStateChanged(auth, (user) => {
+    console.log(
+      '[AUTH] Auth state changed:',
+      user ? user.email : 'SIGNED OUT',
+    )
+
+    callback(user)
+  })
 }
 
 /**
- * Fetch the user document for a given UID from the `users` collection.
- * Returns null if no such document exists (e.g. the account was not provisioned).
+ * Fetch the user document for a given UID.
  */
-export async function getUserDoc(uid: string): Promise<AdminUser | null> {
+export async function getUserDoc(
+  uid: string,
+): Promise<AdminUser | null> {
   const ref = doc(db, FIRESTORE_COLLECTIONS.USERS, uid)
   const snap = await getDoc(ref)
-  if (!snap.exists()) return null
-  return snap.data() as AdminUserDocument
+
+  if (!snap.exists()) {
+    return null
+  }
+
+  return snap.data() as AdminUser
 }
+

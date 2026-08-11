@@ -28,3 +28,6 @@ dist-ssr
 *.sln
 *.sw?
 node_modules
+
+# Firebase Admin SDK credentials
+service-account.json

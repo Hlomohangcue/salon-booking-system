@@ -1,12 +1,15 @@
-import { useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+﻿import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Container from '../../components/ui/Container'
 import Button from '../../components/ui/Button'
 import { useAuth } from '../../features/auth/hooks/useAuth'
-import { setSessionPersistence, sendPasswordReset } from '../../features/auth/services/authService'
+import {
+  setSessionPersistence,
+  sendPasswordReset,
+} from '../../features/auth/services/authService'
 import type { LoginFormValues } from '../../features/auth/types'
 
 const loginSchema = z.object({
@@ -24,6 +27,7 @@ export default function AdminLoginPage() {
   const { signIn, isAdmin, initializing } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
   const [error, setError] = useState<string | null>(null)
   const [remember, setRemember] = useState(true)
   const [resetSent, setResetSent] = useState(false)
@@ -36,23 +40,28 @@ export default function AdminLoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   })
 
-  // If already signed in and an admin, skip the login form.
-  if (!initializing && isAdmin) {
-    return <Navigate to="/admin" replace />
-  }
+  const from =
+    (location.state as { from?: { pathname: string } } | null)?.from?.pathname
+
+  useEffect(() => {
+    if (!initializing && isAdmin) {
+      navigate(from ?? '/admin', { replace: true })
+    }
+  }, [initializing, isAdmin, navigate, from])
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null)
     setResetSent(false)
+
     try {
-      // Apply the chosen persistence level BEFORE signing in.
       await setSessionPersistence(remember)
       await signIn(values.email, values.password)
-      const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname
-      navigate(from ?? '/admin', { replace: true })
     } catch {
       setError('Invalid email or password. Please try again.')
     }
@@ -60,18 +69,24 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     const email = getValues('email')
+
     setResetSent(false)
     setError(null)
+
     if (!email || !z.string().email().safeParse(email).success) {
       setError('Enter a valid email address to reset your password.')
       return
     }
+
     setResetSubmitting(true)
+
     try {
       await sendPasswordReset(email)
       setResetSent(true)
     } catch {
-      setError('We could not send a reset email. Check the address and try again.')
+      setError(
+        'We could not send a reset email. Check the address and try again.',
+      )
     } finally {
       setResetSubmitting(false)
     }
@@ -79,22 +94,24 @@ export default function AdminLoginPage() {
 
   return (
     <>
-      {/* Header */}
-      <section className="bg-gradient-to-br from-purple-950 via-purple-900 to-purple-800 text-white py-16">
-        <Container className="text-center">
-          <p className="text-purple-300 text-xs font-semibold uppercase tracking-widest mb-4">
-            Admin Access
-          </p>
-          <h1 className="font-display text-4xl sm:text-5xl font-semibold leading-tight mb-4">
-            Salon Admin Login
-          </h1>
-          <p className="text-purple-100 text-lg max-w-xl mx-auto leading-relaxed">
-            Sign in to manage bookings, services, and settings.
-          </p>
-        </Container>
-      </section>
+      <header className="bg-white border-b border-gray-100">
+        <Container>
+          <div className="py-8">
+            <p className="text-sm font-medium text-purple-700 mb-2">
+              Admin Access
+            </p>
 
-      {/* Login form */}
+            <h1 className="font-display text-3xl font-semibold text-gray-900">
+              Salon Admin Login
+            </h1>
+
+            <p className="mt-2 text-gray-600">
+              Sign in to manage bookings, services, and settings.
+            </p>
+          </div>
+        </Container>
+      </header>
+
       <section className="py-16 bg-gray-50 min-h-screen">
         <Container className="max-w-md">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
@@ -121,43 +138,73 @@ export default function AdminLoginPage() {
               </div>
             )}
 
-            <form onSubmit={onSubmit} noValidate aria-label="Admin login form">
+            <form
+              onSubmit={onSubmit}
+              noValidate
+              aria-label="Admin login form"
+            >
               <div className="space-y-5 mb-8">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-1.5"
+                  >
                     Email Address
                   </label>
+
                   <input
                     {...register('email')}
                     id="email"
                     type="email"
                     autoComplete="email"
                     placeholder="admin@makeng-salon.co.za"
-                    aria-describedby={errors.email ? 'email-error' : undefined}
-                    className={errors.email ? INPUT_ERROR_CLASS : INPUT_CLASS}
+                    aria-describedby={
+                      errors.email ? 'email-error' : undefined
+                    }
+                    className={
+                      errors.email ? INPUT_ERROR_CLASS : INPUT_CLASS
+                    }
                   />
+
                   {errors.email && (
-                    <p id="email-error" className="mt-1.5 text-xs text-red-600" role="alert">
+                    <p
+                      id="email-error"
+                      className="mt-1.5 text-xs text-red-600"
+                      role="alert"
+                    >
                       {errors.email.message}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 mb-1.5"
+                  >
                     Password
                   </label>
+
                   <input
                     {...register('password')}
                     id="password"
                     type="password"
                     autoComplete="current-password"
                     placeholder="••••••••"
-                    aria-describedby={errors.password ? 'password-error' : undefined}
-                    className={errors.password ? INPUT_ERROR_CLASS : INPUT_CLASS}
+                    aria-describedby={
+                      errors.password ? 'password-error' : undefined
+                    }
+                    className={
+                      errors.password ? INPUT_ERROR_CLASS : INPUT_CLASS
+                    }
                   />
+
                   {errors.password && (
-                    <p id="password-error" className="mt-1.5 text-xs text-red-600" role="alert">
+                    <p
+                      id="password-error"
+                      className="mt-1.5 text-xs text-red-600"
+                      role="alert"
+                    >
                       {errors.password.message}
                     </p>
                   )}
@@ -173,6 +220,7 @@ export default function AdminLoginPage() {
                     />
                     Remember me
                   </label>
+
                   <button
                     type="button"
                     onClick={handleForgotPassword}
@@ -184,7 +232,11 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full justify-center">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full justify-center"
+              >
                 {isSubmitting ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
