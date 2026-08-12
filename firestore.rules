@@ -169,6 +169,15 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // notificationDeliveries - server-written notification audit records
+    // Phase 4.1–4.2: Cloud Functions write; admins may read for operational visibility.
+    // -------------------------------------------------------------------------
+    match /notificationDeliveries/{deliveryId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
     // Default deny - every other collection is off-limits to clients.
     // -------------------------------------------------------------------------
     match /{document=**} {
