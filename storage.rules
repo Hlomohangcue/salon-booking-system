@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// =============================================================================
+// Makeng Salon - Firebase Storage Security Rules
+// Phase 4.6: Gallery (Our Work)
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdminRole(role) {
+      return role == 'admin' || role == 'super_admin';
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && isAdminRole(firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role);
+    }
+
+    match /gallery/{itemId}/{fileName} {
+      allow read: if isAdmin()
+        || firestore.get(/databases/(default)/documents/galleryItems/$(itemId)).data.isPublished == true;
+
+      allow write: if isAdmin()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+
+      allow delete: if isAdmin();
+    }
+  }
+}

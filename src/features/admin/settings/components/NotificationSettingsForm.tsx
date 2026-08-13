@@ -5,7 +5,7 @@ import {
   type NotificationSettingsInput,
   type NotificationSettingsOutput,
 } from '../settingsValidation'
-import { FormField, INPUT_CLASS, INPUT_ERROR_CLASS, CHECKBOX_CLASS } from './FormField'
+import { CHECKBOX_CLASS } from './FormField'
 import Button from '../../../../components/ui/Button'
 import type { NotificationSettings } from '../types'
 
@@ -19,11 +19,8 @@ interface NotificationSettingsFormProps {
 }
 
 /**
- * Notification settings form.
- *
- * Email toggles are active. SMS and WhatsApp are configuration placeholders
- * reserved for future provider integrations — they are stored but have no
- * runtime effect yet.
+ * Notification settings form — email and WhatsApp confirmation toggles.
+ * Provider secrets are configured server-side only.
  */
 export default function NotificationSettingsForm({
   defaultValues,
@@ -33,48 +30,40 @@ export default function NotificationSettingsForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
   } = useForm<NotificationSettingsInput, unknown, NotificationSettingsOutput>({
     resolver: zodResolver(notificationSettingsSchema),
     defaultValues: {
       emailEnabled: defaultValues.emailEnabled,
+      whatsappEnabled: defaultValues.whatsappEnabled,
       smsPlaceholder: defaultValues.smsPlaceholder,
       whatsappPlaceholder: defaultValues.whatsappPlaceholder,
     },
   })
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label="Notification settings form" className="space-y-5">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      aria-label="Notification settings form"
+      className="space-y-4"
+    >
       <label className="flex items-center gap-3 cursor-pointer">
         <input
           {...register('emailEnabled')}
           type="checkbox"
           className={CHECKBOX_CLASS}
         />
-        <span className="text-sm font-medium text-gray-700">Enable email notifications</span>
+        <span className="text-sm font-medium text-gray-700">Email confirmations</span>
       </label>
 
-      <FormField id="smsPlaceholder" label="SMS provider key" hint="placeholder — future SMS integration" error={errors.smsPlaceholder?.message}>
+      <label className="flex items-center gap-3 cursor-pointer">
         <input
-          {...register('smsPlaceholder')}
-          id="smsPlaceholder"
-          type="text"
-          placeholder="Reserved for SMS provider"
-          aria-describedby={errors.smsPlaceholder ? 'smsPlaceholder-error' : undefined}
-          className={errors.smsPlaceholder ? INPUT_ERROR_CLASS : INPUT_CLASS}
+          {...register('whatsappEnabled')}
+          type="checkbox"
+          className={CHECKBOX_CLASS}
         />
-      </FormField>
-
-      <FormField id="whatsappPlaceholder" label="WhatsApp provider key" hint="placeholder — future WhatsApp integration" error={errors.whatsappPlaceholder?.message}>
-        <input
-          {...register('whatsappPlaceholder')}
-          id="whatsappPlaceholder"
-          type="text"
-          placeholder="Reserved for WhatsApp integration"
-          aria-describedby={errors.whatsappPlaceholder ? 'whatsappPlaceholder-error' : undefined}
-          className={errors.whatsappPlaceholder ? INPUT_ERROR_CLASS : INPUT_CLASS}
-        />
-      </FormField>
+        <span className="text-sm font-medium text-gray-700">WhatsApp confirmations</span>
+      </label>
 
       <div className="flex justify-end gap-3 pt-2">
         <Button type="submit" size="sm" disabled={submitting}>
