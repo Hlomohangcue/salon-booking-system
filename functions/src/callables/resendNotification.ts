@@ -30,7 +30,7 @@ const whatsappApiVersion = defineString('WHATSAPP_API_VERSION', {
  */
 export const resendNotificationCallable = onCall(
   {
-    region: 'us-central1',
+    region: 'africa-south1',
     secrets: [brevoApiKey, whatsappAccessToken],
   },
   async (request) => {

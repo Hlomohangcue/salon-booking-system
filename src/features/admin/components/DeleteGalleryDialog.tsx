@@ -18,7 +18,7 @@ export default function DeleteGalleryDialog({
   return (
     <Dialog
       title="Delete Photo"
-      description="This permanently removes the photo from the gallery and Firebase Storage."
+      description="This permanently removes the photo from the gallery. The image may remain in Cloudinary until manually cleaned up."
       open={item !== null}
       onClose={onClose}
     >

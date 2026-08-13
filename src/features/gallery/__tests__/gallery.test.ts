@@ -6,6 +6,7 @@ import {
 } from '../galleryService'
 import type { GalleryItem, GalleryItemDocument } from '../types'
 import { Timestamp } from 'firebase/firestore'
+import { IMAGE_STORAGE_PROVIDER_CLOUDINARY } from '../types'
 
 function makeItem(
   overrides: Partial<GalleryItem> & { galleryItemId: string },
@@ -17,7 +18,9 @@ function makeItem(
     description: '',
     category: overrides.category ?? 'hair',
     imageUrl: 'https://example.com/img.webp',
-    storagePath: `gallery/${overrides.galleryItemId}/original.webp`,
+    provider: IMAGE_STORAGE_PROVIDER_CLOUDINARY,
+    providerKey: `makeng-gallery/${overrides.galleryItemId}`,
+    storagePath: `makeng-gallery/${overrides.galleryItemId}`,
     isPublished: overrides.isPublished ?? true,
     displayOrder: overrides.displayOrder ?? 0,
     uploadedBy: 'admin-1',
@@ -116,9 +119,9 @@ describe('validateGalleryImageFile', () => {
   })
 })
 
-describe('galleryStoragePath', () => {
-  it('uses galleryItemId in path', async () => {
-    const { galleryStoragePath } = await import('../types')
-    expect(galleryStoragePath('abc123')).toBe('gallery/abc123/original.webp')
+describe('galleryProviderKey', () => {
+  it('uses galleryItemId in Cloudinary public_id path', async () => {
+    const { galleryProviderKey } = await import('../types')
+    expect(galleryProviderKey('abc123')).toBe('makeng-gallery/abc123')
   })
 })

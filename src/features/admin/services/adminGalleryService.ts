@@ -1,4 +1,4 @@
-import { db, storage } from '../../../lib/firebase'
+import { db } from '../../../lib/firebase'
 import {
   collection,
   doc,
@@ -12,20 +12,17 @@ import {
   type Timestamp as FirestoreTimestamp,
 } from 'firebase/firestore'
 import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage'
-import {
   GALLERY_COLLECTIONS,
-  galleryStoragePath,
+  galleryProviderKey,
+  IMAGE_STORAGE_PROVIDER_CLOUDINARY,
   type GalleryItem,
   type GalleryItemDocument,
   type UploadProgressCallback,
 } from '../../gallery/types'
 import type { GalleryMetadataOutput } from '../../gallery/galleryValidation'
 import { parseFeaturedUntil } from '../../gallery/galleryMetadataHelpers'
+import { getImageStorageService } from '../../gallery/imageStorage/getImageStorageService'
+import { ImageStorageError } from '../../gallery/imageStorage/imageStorageErrors'
 
 export class GalleryError extends Error {
   readonly code:
@@ -33,6 +30,7 @@ export class GalleryError extends Error {
     | 'UPLOAD_FAILED'
     | 'DELETE_FAILED'
     | 'PERMISSION_DENIED'
+    | 'NOT_CONFIGURED'
     | 'UNKNOWN'
 
   constructor(code: GalleryError['code'], message: string) {
@@ -44,9 +42,16 @@ export class GalleryError extends Error {
 
 export function toGalleryError(error: unknown): GalleryError {
   if (error instanceof GalleryError) return error
+  if (error instanceof ImageStorageError) {
+    if (error.debugDetail) {
+      console.debug('[gallery]', error.code, error.debugDetail)
+    }
+    const galleryCode = mapImageStorageCodeToGallery(error.code)
+    return new GalleryError(galleryCode, error.message)
+  }
   const message = error instanceof Error ? error.message : undefined
   const code = (error as { code?: string })?.code
-  if (code === 'storage/unauthorized' || code === 'permission-denied') {
+  if (code === 'permission-denied') {
     return new GalleryError(
       'PERMISSION_DENIED',
       'You do not have permission to manage gallery items.',
@@ -58,14 +63,51 @@ export function toGalleryError(error: unknown): GalleryError {
   )
 }
 
+function mapImageStorageCodeToGallery(
+  code: ImageStorageError['code'],
+): GalleryError['code'] {
+  switch (code) {
+    case 'NOT_CONFIGURED':
+      return 'NOT_CONFIGURED'
+    case 'INVALID_REQUEST':
+    case 'UNAUTHORIZED':
+    case 'FORBIDDEN':
+    case 'FILE_TOO_LARGE':
+    case 'RATE_LIMITED':
+    case 'UPLOAD_CANCELLED':
+    case 'NETWORK_ERROR':
+    case 'SERVER_ERROR':
+    case 'INVALID_RESPONSE':
+    case 'UNKNOWN':
+      return 'UPLOAD_FAILED'
+    default:
+      return 'UNKNOWN'
+  }
+}
+
+function resolveProviderFields(
+  id: string,
+  data: GalleryItemDocument,
+): Pick<GalleryItem, 'provider' | 'providerKey' | 'storagePath'> {
+  const providerKey =
+    data.providerKey ?? data.storagePath ?? galleryProviderKey(id)
+  const provider = data.provider ?? IMAGE_STORAGE_PROVIDER_CLOUDINARY
+  return {
+    provider,
+    providerKey,
+    storagePath: providerKey,
+  }
+}
+
 function fromFirestore(id: string, data: GalleryItemDocument): GalleryItem {
+  const providerFields = resolveProviderFields(id, data)
   return {
     galleryItemId: id,
     title: data.title,
     description: data.description ?? '',
     category: data.category,
     imageUrl: data.imageUrl,
-    storagePath: data.storagePath,
+    ...providerFields,
     isPublished: data.isPublished,
     displayOrder: data.displayOrder,
     uploadedBy: data.uploadedBy,
@@ -117,19 +159,25 @@ export interface UploadGalleryItemParams {
 }
 
 /**
- * Upload image to Storage and create the Firestore gallery document.
+ * Upload image via Cloudinary and create the Firestore gallery document.
  */
 export async function uploadGalleryItem(
   params: UploadGalleryItemParams,
 ): Promise<string> {
   const refDoc = doc(collection(db, GALLERY_COLLECTIONS.GALLERY_ITEMS))
   const galleryItemId = refDoc.id
-  const storagePath = galleryStoragePath(galleryItemId)
-  const storageRef = ref(storage, storagePath)
+  const imageStorage = getImageStorageService()
 
   try {
-    await uploadBlobWithProgress(storageRef, params.file, params.onProgress)
-    const imageUrl = await getDownloadURL(storageRef)
+    const upload = await imageStorage.upload(
+      {
+        file: params.file,
+        galleryItemId,
+        contentType: 'image/webp',
+        fileName: 'original.webp',
+      },
+      params.onProgress,
+    )
 
     const featuredFields = params.metadata.isFeatured
       ? featuredUntilField(params.metadata.featuredUntil)
@@ -140,53 +188,25 @@ export async function uploadGalleryItem(
       title: params.metadata.title,
       description: params.metadata.description ?? '',
       category: params.metadata.category,
-      imageUrl,
-      storagePath,
+      imageUrl: upload.imageUrl,
+      provider: upload.provider,
+      providerKey: upload.providerKey,
+      storagePath: upload.providerKey,
       isPublished: params.metadata.isPublished,
       displayOrder: params.metadata.displayOrder,
       uploadedBy: params.uploadedBy,
       isFeatured: params.metadata.isFeatured,
       ...featuredFields,
-      mimeType: 'image/webp',
-      fileSizeBytes: params.file.size,
+      mimeType: upload.mimeType,
+      fileSizeBytes: upload.fileSizeBytes,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
 
     return galleryItemId
   } catch (error) {
-    try {
-      await deleteObject(storageRef)
-    } catch {
-      // Best-effort cleanup
-    }
     throw toGalleryError(error)
   }
-}
-
-function uploadBlobWithProgress(
-  storageRef: ReturnType<typeof ref>,
-  file: Blob,
-  onProgress?: UploadProgressCallback,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, file, {
-      contentType: 'image/webp',
-    })
-    task.on(
-      'state_changed',
-      (snapshot) => {
-        if (onProgress && snapshot.totalBytes > 0) {
-          const percent = Math.round(
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100,
-          )
-          onProgress(percent)
-        }
-      },
-      (error) => reject(error),
-      () => resolve(),
-    )
-  })
 }
 
 export interface UpdateGalleryMetadataParams {
@@ -251,7 +271,7 @@ export async function setGalleryFeatured(
   })
 }
 
-/** Delete Firestore document and Storage object. */
+/** Delete Firestore document (remote image cleanup is best-effort on MVP). */
 export async function deleteGalleryItem(galleryItemId: string): Promise<void> {
   const refDoc = doc(db, GALLERY_COLLECTIONS.GALLERY_ITEMS, galleryItemId)
   const snap = await getDoc(refDoc)
@@ -260,18 +280,13 @@ export async function deleteGalleryItem(galleryItemId: string): Promise<void> {
   }
 
   const data = snap.data() as GalleryItemDocument
-  const storagePath = data.storagePath || galleryStoragePath(galleryItemId)
+  const providerKey =
+    data.providerKey ?? data.storagePath ?? galleryProviderKey(galleryItemId)
 
   try {
-    await deleteObject(ref(storage, storagePath))
-  } catch (error) {
-    const code = (error as { code?: string })?.code
-    if (code !== 'storage/object-not-found') {
-      throw new GalleryError(
-        'DELETE_FAILED',
-        'Unable to delete the image file. Please try again.',
-      )
-    }
+    await getImageStorageService().delete(providerKey)
+  } catch {
+    // MVP: Cloudinary delete is a no-op without server credentials.
   }
 
   await deleteDoc(refDoc)
@@ -289,26 +304,27 @@ export async function replaceGalleryImage(
     throw new GalleryError('NOT_FOUND', 'This gallery item no longer exists.')
   }
 
-  const existing = snap.data() as GalleryItemDocument
-  const storagePath = galleryStoragePath(galleryItemId)
-  const storageRef = ref(storage, storagePath)
+  try {
+    const upload = await getImageStorageService().upload(
+      {
+        file,
+        galleryItemId,
+        contentType: 'image/webp',
+        fileName: 'original.webp',
+      },
+      onProgress,
+    )
 
-  await uploadBlobWithProgress(storageRef, file, onProgress)
-  const imageUrl = await getDownloadURL(storageRef)
-
-  if (existing.storagePath && existing.storagePath !== storagePath) {
-    try {
-      await deleteObject(ref(storage, existing.storagePath))
-    } catch {
-      // Non-fatal
-    }
+    await updateDoc(refDoc, {
+      imageUrl: upload.imageUrl,
+      provider: upload.provider,
+      providerKey: upload.providerKey,
+      storagePath: upload.providerKey,
+      mimeType: upload.mimeType,
+      fileSizeBytes: upload.fileSizeBytes,
+      updatedAt: serverTimestamp(),
+    })
+  } catch (error) {
+    throw toGalleryError(error)
   }
-
-  await updateDoc(refDoc, {
-    imageUrl,
-    storagePath,
-    mimeType: 'image/webp',
-    fileSizeBytes: file.size,
-    updatedAt: serverTimestamp(),
-  })
 }

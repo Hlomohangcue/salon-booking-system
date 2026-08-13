@@ -9,7 +9,9 @@ const sampleItem: GalleryItem = {
   description: '',
   category: 'hair',
   imageUrl: 'https://example.com/photo.webp',
-  storagePath: 'gallery/g1/original.webp',
+  provider: 'cloudinary',
+  providerKey: 'makeng-gallery/g1',
+  storagePath: 'makeng-gallery/g1',
   isPublished: true,
   displayOrder: 0,
   uploadedBy: 'admin-1',
@@ -55,7 +57,7 @@ describe('GalleryError', () => {
     const { toGalleryError, GalleryError } = await import(
       '../../admin/services/adminGalleryService'
     )
-    const err = toGalleryError({ code: 'storage/unauthorized' })
+    const err = toGalleryError({ code: 'permission-denied' })
     expect(err).toBeInstanceOf(GalleryError)
     expect(err.code).toBe('PERMISSION_DENIED')
   })

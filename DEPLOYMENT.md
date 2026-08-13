@@ -75,20 +75,19 @@ npm run deploy
 This is equivalent to:
 
 ```bash
-firebase deploy --only hosting,firestore,storage
+firebase deploy --only hosting,firestore,functions
 ```
 
 It deploys:
 
 | Target | Source | Purpose |
 |---|---|---|
-| **Hosting** | `dist/` | React SPA |
+| **Hosting** | `dist/` | React SPA with SPA rewrite, caching, and security headers |
 | **Firestore rules** | `firestore.rules` | Security rules |
 | **Firestore indexes** | `firestore.indexes.json` | Composite indexes (bookings, gallery) |
-| **Storage rules** | `storage.rules` | Gallery image access control |
-| **Hosting** | `dist/` | SPA (see `firebase.json`) with SPA rewrite, caching, and security headers |
-| **Firestore Rules** | `firestore.rules` | Least-privilege production security rules |
-| **Firestore Indexes** | `firestore.indexes.json` | Composite indexes required by the booking queries |
+| **Cloud Functions** | `functions/` | Notification pipeline (requires Blaze plan) |
+
+Gallery images are hosted on **Cloudinary** (not Firebase Storage). Configure `VITE_CLOUDINARY_*` in `.env` — see `docs/GALLERY.md`.
 
 > If you only changed code, you can deploy just hosting to avoid re-publishing rules:
 > ```bash

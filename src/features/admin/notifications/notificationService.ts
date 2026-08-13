@@ -107,7 +107,7 @@ export async function resendNotification(
   bookingId: string,
   channel: NotificationChannel,
 ): Promise<ResendNotificationResponse> {
-  const functions = getFunctions(app, 'us-central1')
+  const functions = getFunctions(app, 'africa-south1')
   const callable = httpsCallable<
     { bookingId: string; channel: NotificationChannel },
     ResendNotificationResponse

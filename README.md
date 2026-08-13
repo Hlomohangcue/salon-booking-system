@@ -44,10 +44,21 @@ A modern online booking platform for Makeng Salon built with React, TypeScript, 
    VITE_FIREBASE_API_KEY=AIza...
    VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
    VITE_FIREBASE_PROJECT_ID=your-project-id
-   VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
    VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
    VITE_FIREBASE_APP_ID=1:123:web:abc
    ```
+
+   **Gallery image hosting (Cloudinary — client-owned account):**
+
+   ```env
+   VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
+   VITE_CLOUDINARY_UPLOAD_PRESET=your_unsigned_upload_preset
+   ```
+
+   - The Cloudinary cloud name and unsigned upload preset are **public frontend configuration** (safe in `VITE_*` variables).
+   - **`CLOUDINARY_API_SECRET` must never be placed in frontend code or `VITE_*` variables.**
+   - **Firebase Storage is not required** for the Gallery feature and must not be deployed for gallery uploads.
+   - See `docs/GALLERY.md` for Cloudinary preset setup.
 
 3. **Seed Firestore with development data**
 

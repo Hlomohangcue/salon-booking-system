@@ -9,14 +9,21 @@ import {
 import { db } from '../../lib/firebase'
 import {
   GALLERY_COLLECTIONS,
+  IMAGE_STORAGE_PROVIDER_CLOUDINARY,
+  galleryProviderKey,
   type GalleryItem,
   type GalleryItemDocument,
 } from './types'
 
 function fromFirestore(data: GalleryItemDocument): GalleryItem {
+  const providerKey =
+    data.providerKey ?? data.storagePath ?? galleryProviderKey(data.galleryItemId)
   return {
     ...data,
     description: data.description ?? '',
+    provider: data.provider ?? IMAGE_STORAGE_PROVIDER_CLOUDINARY,
+    providerKey,
+    storagePath: providerKey,
     createdAt: data.createdAt.toDate(),
     updatedAt: data.updatedAt.toDate(),
     isFeatured: data.isFeatured ?? false,
