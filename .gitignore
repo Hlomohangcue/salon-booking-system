@@ -28,3 +28,9 @@ dist-ssr
 *.sln
 *.sw?
 node_modules
+
+# Firebase service account credentials — never commit
+service-account.json
+
+# Firebase Functions compiled build output
+functions/lib/
