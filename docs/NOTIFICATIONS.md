@@ -286,9 +286,76 @@ None of the above are configured by this codebase — they must be set up manual
 
 ---
 
-## Phase 4.5 (future)
+## Phase 4.5 — Admin controls
 
-- Admin notification status UI
-- Manual resend callable
+### Admin notification status UI
+
+`BookingDetailPanel` shows a **Notifications** section for confirmed/completed bookings with live Firestore subscriptions to `notificationDeliveries/{deliveryId}`.
+
+### Attempt history data model
+
+Each logical delivery document keeps the **latest aggregate state**. Individual sends are recorded under:
+
+```
+notificationDeliveries/{deliveryId}/attempts/{attemptId}
+```
+
+| Field | Description |
+|---|---|
+| `attemptId` | Auto-generated document ID |
+| `channel` | `email` \| `whatsapp` |
+| `provider` | `brevo` \| `meta-whatsapp` |
+| `status` | Final attempt status |
+| `trigger` | `status_transition` \| `manual_resend` |
+| `startedAt` / `completedAt` | Attempt lifecycle timestamps |
+| `providerMessageId` | Provider reference when sent |
+| `errorCode` / `errorMessage` | Sanitized failure details |
+| `triggeredByUid` | Admin UID for manual resends |
+
+Original confirmation attempts are **never overwritten** — manual resends append new attempt documents and update the parent delivery summary.
+
+### Manual resend callable
+
+`resendNotificationCallable` (region `us-central1`):
+
+```json
+{ "bookingId": "...", "channel": "email" | "whatsapp" }
+```
+
+Security:
+- Requires Firebase Authentication
+- Caller must have `users/{uid}.role == 'admin'`
+- Booking content rebuilt server-side from Firestore (client cannot supply recipient or status)
+- Rejects non-confirmed bookings, invalid channels, and concurrent `processing` deliveries
+
+### Settings UI
+
+Admin → Settings → Notifications toggles:
+
+- `settings/notifications.emailEnabled`
+- `settings/notifications.whatsappEnabled`
+
+Provider secrets remain server-side only.
+
+### Firestore rules
+
+```javascript
+match /notificationDeliveries/{deliveryId} {
+  allow read: if isAdmin();
+  allow create, update, delete: if false;
+
+  match /attempts/{attemptId} {
+    allow read: if isAdmin();
+    allow create, update, delete: if false;
+  }
+}
+```
+
+---
+
+## Phase 4.6 (future)
+
 - Meta delivery/read webhooks
 - Dedicated retry queue for failed deliveries
+- Processing-state recovery for stale `processing` records
+- Appointment reminders and cancellation notifications

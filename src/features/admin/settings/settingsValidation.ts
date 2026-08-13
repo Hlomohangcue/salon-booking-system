@@ -155,6 +155,7 @@ export type BookingSettingsOutput = z.output<typeof bookingSettingsSchema>
 
 export const notificationSettingsSchema = z.object({
   emailEnabled: z.boolean(),
+  whatsappEnabled: z.boolean(),
   smsPlaceholder: z
     .string()
     .max(200, 'SMS placeholder must be 200 characters or fewer')

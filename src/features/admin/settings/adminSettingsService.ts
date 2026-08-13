@@ -84,6 +84,7 @@ const DEFAULT_BUSINESS_INFO: BusinessInfo = {
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = {
   emailEnabled: false,
+  whatsappEnabled: false,
   smsPlaceholder: '',
   whatsappPlaceholder: '',
 }
@@ -201,7 +202,14 @@ export async function getSalonSettings(): Promise<SalonSettings> {
       ? { ...DEFAULT_BUSINESS_INFO, ...businessSnap.data() }
       : { ...DEFAULT_BUSINESS_INFO },
     notifications: notificationSnap.exists()
-      ? { ...DEFAULT_NOTIFICATIONS, ...notificationSnap.data() }
+      ? {
+          ...DEFAULT_NOTIFICATIONS,
+          ...notificationSnap.data(),
+          whatsappEnabled:
+            typeof notificationSnap.data()?.whatsappEnabled === 'boolean'
+              ? notificationSnap.data()?.whatsappEnabled
+              : DEFAULT_NOTIFICATIONS.whatsappEnabled,
+        }
       : { ...DEFAULT_NOTIFICATIONS },
     appearance: appearanceSnap.exists()
       ? { ...DEFAULT_APPEARANCE, ...appearanceSnap.data() }

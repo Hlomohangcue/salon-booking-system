@@ -15,6 +15,7 @@ import {
 } from './services/authService'
 import { AuthContext, type AuthContextValue } from './context'
 import type { AdminUser, AdminUserDocument } from './types'
+import { isAdminRole } from './roles'
 
 /**
  * Provides the current authentication state and the admin user document.
@@ -96,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOutAdmin()
   }, [])
 
-  const isAdmin = adminUser?.role === 'admin'
+  const isAdmin = isAdminRole(adminUser?.role)
 
   const value: AuthContextValue = {
     firebaseUser,

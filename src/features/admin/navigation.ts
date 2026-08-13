@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import type { UserRole } from '../auth/types'
+import { ADMIN_ROLES } from '../auth/roles'
 import {
   DashboardIcon,
   CalendarIcon,
@@ -7,6 +8,7 @@ import {
   UsersIcon,
   ChartIcon,
   SettingsIcon,
+  GalleryIcon,
 } from './navigationIcons'
 
 /**
@@ -33,37 +35,43 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     label: 'Dashboard',
     path: '/admin',
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES],
     icon: DashboardIcon,
   },
   {
     label: 'Bookings',
     path: '/admin/bookings',
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES],
     icon: CalendarIcon,
   },
   {
     label: 'Services',
     path: '/admin/services',
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES],
     icon: SparklesIcon,
+  },
+  {
+    label: 'Gallery',
+    path: '/admin/gallery',
+    roles: [...ADMIN_ROLES],
+    icon: GalleryIcon,
   },
   {
     label: 'Customers',
     path: '/admin/customers',
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES],
     icon: UsersIcon,
   },
   {
     label: 'Reports',
     path: '/admin/reports',
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES],
     icon: ChartIcon,
   },
   {
     label: 'Settings',
     path: '/admin/settings',
-    roles: ['admin'],
+    roles: [...ADMIN_ROLES],
     icon: SettingsIcon,
   },
 ]

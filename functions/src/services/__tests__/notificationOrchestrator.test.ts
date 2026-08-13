@@ -257,7 +257,10 @@ describe('handleBookingUpdated', () => {
     expect(emailService.sendConfirmationEmail).toHaveBeenCalledTimes(1)
     expect(whatsappService.sendConfirmationWhatsApp).toHaveBeenCalledTimes(1)
     expect(second!.channels.every((c) => !c.created)).toBe(true)
-    expect(store.getAllDocs().size).toBe(2)
+    const deliveryDocs = [...store.getAllDocs().keys()].filter((p) =>
+      p.startsWith(`${NOTIFICATION_DELIVERIES_COLLECTION}/`) && !p.includes('/attempts/'),
+    )
+    expect(deliveryDocs).toHaveLength(2)
   })
 
   it('9. missing phone skips WhatsApp safely', async () => {

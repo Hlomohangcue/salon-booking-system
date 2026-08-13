@@ -1,5 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 import { getAuth, type Auth } from 'firebase/auth'
 import { initializeAppCheck, ReCaptchaV3Provider, type AppCheck } from 'firebase/app-check'
 
@@ -14,6 +15,7 @@ const firebaseConfig = {
 
 export const app: FirebaseApp = initializeApp(firebaseConfig)
 export const db: Firestore = getFirestore(app)
+export const storage: FirebaseStorage = getStorage(app)
 export const auth: Auth = getAuth(app)
 
 /**

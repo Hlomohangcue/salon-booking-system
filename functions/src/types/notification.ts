@@ -10,6 +10,9 @@ import type { Timestamp } from 'firebase-admin/firestore'
 /** Firestore collection for notification delivery audit records. */
 export const NOTIFICATION_DELIVERIES_COLLECTION = 'notificationDeliveries'
 
+/** Subcollection under each delivery document for per-attempt audit history. */
+export const NOTIFICATION_ATTEMPTS_SUBCOLLECTION = 'attempts'
+
 export type NotificationEventType = 'confirmation'
 
 export type NotificationChannel = 'email' | 'whatsapp'
@@ -58,6 +61,39 @@ export interface NotificationDeliveryDocument {
   updatedAt: Timestamp
   idempotencyKey: string
   triggeredByUid?: string
+}
+
+/**
+ * A single send attempt under notificationDeliveries/{deliveryId}/attempts/{attemptId}.
+ * Original confirmation and manual resends each create a new attempt; the parent
+ * delivery document holds the latest aggregate state.
+ */
+export interface NotificationAttemptDocument {
+  attemptId: string
+  channel: NotificationChannel
+  provider: NotificationProvider
+  status: NotificationDeliveryStatus
+  trigger: NotificationTrigger
+  startedAt: Timestamp
+  completedAt?: Timestamp
+  providerMessageId?: string
+  errorCode?: string
+  errorMessage?: string
+  skipReason?: NotificationSkipReason
+  triggeredByUid?: string
+}
+
+/** Sanitized result returned to admin clients after a manual resend. */
+export interface ResendNotificationResult {
+  bookingId: string
+  channel: NotificationChannel
+  deliveryId: string
+  attemptId: string
+  status: NotificationDeliveryStatus
+  skipReason?: NotificationSkipReason
+  errorCode?: string
+  errorMessage?: string
+  providerMessageId?: string
 }
 
 /** Raw booking fields read from Firestore inside the trigger. */

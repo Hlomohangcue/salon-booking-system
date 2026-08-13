@@ -22,6 +22,9 @@ const AdminBookingsPage = lazy(
 const AdminServicesPage = lazy(
   () => import('./features/admin/pages/AdminServicesPage'),
 )
+const AdminGalleryPage = lazy(
+  () => import('./features/admin/pages/AdminGalleryPage'),
+)
 const AdminCustomersPage = lazy(
   () => import('./features/admin/pages/AdminCustomersPage'),
 )
@@ -102,6 +105,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageFallback />}>
                 <AdminServicesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'gallery',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <AdminGalleryPage />
               </Suspense>
             ),
           },

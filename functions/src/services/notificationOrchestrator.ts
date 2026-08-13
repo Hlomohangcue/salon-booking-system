@@ -11,7 +11,7 @@ import type { EmailConfig } from '../config/emailConfig'
 import { isEmailConfigValid } from '../config/emailConfig'
 import type { WhatsAppConfig } from '../config/whatsappConfig'
 import { isWhatsAppConfigValid } from '../config/whatsappConfig'
-import { claimDelivery, updateDelivery } from './deliveryRepository'
+import { claimDelivery, finalizeDeliveryAttempt, recordSkippedDelivery, startDeliveryAttempt } from './deliveryRepository'
 import type { EmailService } from './emailService'
 import { createBrevoEmailService } from './emailService'
 import type { WhatsAppService } from './whatsappService'
@@ -71,52 +71,50 @@ export async function dispatchEmailChannel(
   const recipient = booking.email?.trim() ?? ''
 
   if (!hasEmailRecipient(booking.email)) {
-    const claim = await claimDelivery(db, {
+    const recorded = await recordSkippedDelivery(db, {
       bookingId: booking.bookingId,
       channel: 'email',
       recipient: '',
       provider: 'brevo',
-      initialStatus: 'skipped',
       skipReason: 'missing_recipient',
     })
 
     logEmailOutcome(booking.bookingId, {
       status: 'skipped',
       skipReason: 'missing_recipient',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
     })
 
     return {
       channel: 'email',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
       status: 'skipped',
       skipReason: 'missing_recipient',
     }
   }
 
   if (!notificationSettings.emailEnabled) {
-    const claim = await claimDelivery(db, {
+    const recorded = await recordSkippedDelivery(db, {
       bookingId: booking.bookingId,
       channel: 'email',
       recipient,
       provider: 'brevo',
-      initialStatus: 'skipped',
       skipReason: 'disabled',
     })
 
     logEmailOutcome(booking.bookingId, {
       status: 'skipped',
       skipReason: 'disabled',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
     })
 
     return {
       channel: 'email',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
       status: 'skipped',
       skipReason: 'disabled',
     }
@@ -135,11 +133,19 @@ export async function dispatchEmailChannel(
       return finalizedEmailResult(claim)
     }
 
-    await updateDelivery(db, {
+    const attempt = await startDeliveryAttempt(db, {
       bookingId: booking.bookingId,
       channel: 'email',
+      recipient,
+      provider: 'brevo',
+      trigger: 'status_transition',
+    })
+
+    await finalizeDeliveryAttempt(db, {
+      bookingId: booking.bookingId,
+      channel: 'email',
+      attemptId: attempt.attemptId,
       status: 'failed',
-      attempts: 1,
       errorCode: 'sender_not_configured',
       errorMessage: 'NOTIFICATION_FROM_EMAIL is not configured.',
     })
@@ -177,13 +183,12 @@ export async function dispatchEmailChannel(
     return finalizedEmailResult(claim)
   }
 
-  const attemptNumber = claim.created ? 1 : 2
-
-  await updateDelivery(db, {
+  const attempt = await startDeliveryAttempt(db, {
     bookingId: booking.bookingId,
     channel: 'email',
-    status: 'processing',
-    attempts: attemptNumber,
+    recipient,
+    provider: 'brevo',
+    trigger: 'status_transition',
   })
 
   const emailContent = buildConfirmationEmail(payload)
@@ -197,11 +202,11 @@ export async function dispatchEmailChannel(
       textContent: emailContent.text,
     })
 
-    await updateDelivery(db, {
+    await finalizeDeliveryAttempt(db, {
       bookingId: booking.bookingId,
       channel: 'email',
+      attemptId: attempt.attemptId,
       status: 'sent',
-      attempts: attemptNumber,
       providerMessageId: result.providerMessageId,
     })
 
@@ -210,7 +215,7 @@ export async function dispatchEmailChannel(
       idempotencyKey: claim.idempotencyKey,
       created: claim.created,
       providerMessageId: result.providerMessageId,
-      attempts: attemptNumber,
+      attempts: attempt.attemptNumber,
     })
 
     return {
@@ -222,11 +227,11 @@ export async function dispatchEmailChannel(
   } catch (error) {
     const { code, message } = sanitizeErrorForStorage(error)
 
-    await updateDelivery(db, {
+    await finalizeDeliveryAttempt(db, {
       bookingId: booking.bookingId,
       channel: 'email',
+      attemptId: attempt.attemptId,
       status: 'failed',
-      attempts: attemptNumber,
       errorCode: code,
       errorMessage: message,
     })
@@ -236,7 +241,7 @@ export async function dispatchEmailChannel(
       idempotencyKey: claim.idempotencyKey,
       created: claim.created,
       errorCode: code,
-      attempts: attemptNumber,
+      attempts: attempt.attemptNumber,
     })
 
     return {
@@ -297,78 +302,75 @@ export async function dispatchWhatsappChannel(
   const recipient = booking.phoneNumber?.trim() ?? ''
 
   if (isPhoneMissing(booking.phoneNumber)) {
-    const claim = await claimDelivery(db, {
+    const recorded = await recordSkippedDelivery(db, {
       bookingId: booking.bookingId,
       channel: 'whatsapp',
       recipient: '',
       provider: 'meta-whatsapp',
-      initialStatus: 'skipped',
       skipReason: 'missing_recipient',
     })
 
     logWhatsappOutcome(booking.bookingId, {
       status: 'skipped',
       skipReason: 'missing_recipient',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
     })
 
     return {
       channel: 'whatsapp',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
       status: 'skipped',
       skipReason: 'missing_recipient',
     }
   }
 
   if (!hasValidPhoneRecipient(booking.phoneNumber)) {
-    const claim = await claimDelivery(db, {
+    const recorded = await recordSkippedDelivery(db, {
       bookingId: booking.bookingId,
       channel: 'whatsapp',
       recipient,
       provider: 'meta-whatsapp',
-      initialStatus: 'skipped',
       skipReason: 'invalid_recipient',
     })
 
     logWhatsappOutcome(booking.bookingId, {
       status: 'skipped',
       skipReason: 'invalid_recipient',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
     })
 
     return {
       channel: 'whatsapp',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
       status: 'skipped',
       skipReason: 'invalid_recipient',
     }
   }
 
   if (!notificationSettings.whatsappEnabled) {
-    const claim = await claimDelivery(db, {
+    const recorded = await recordSkippedDelivery(db, {
       bookingId: booking.bookingId,
       channel: 'whatsapp',
       recipient,
       provider: 'meta-whatsapp',
-      initialStatus: 'skipped',
       skipReason: 'disabled',
     })
 
     logWhatsappOutcome(booking.bookingId, {
       status: 'skipped',
       skipReason: 'disabled',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
     })
 
     return {
       channel: 'whatsapp',
-      idempotencyKey: claim.idempotencyKey,
-      created: claim.created,
+      idempotencyKey: recorded.deliveryId,
+      created: recorded.created,
       status: 'skipped',
       skipReason: 'disabled',
     }
@@ -387,11 +389,19 @@ export async function dispatchWhatsappChannel(
       return finalizedWhatsappResult(claim)
     }
 
-    await updateDelivery(db, {
+    const attempt = await startDeliveryAttempt(db, {
       bookingId: booking.bookingId,
       channel: 'whatsapp',
+      recipient,
+      provider: 'meta-whatsapp',
+      trigger: 'status_transition',
+    })
+
+    await finalizeDeliveryAttempt(db, {
+      bookingId: booking.bookingId,
+      channel: 'whatsapp',
+      attemptId: attempt.attemptId,
       status: 'failed',
-      attempts: 1,
       errorCode: 'provider_not_configured',
       errorMessage:
         'WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_CONFIRMATION_TEMPLATE is not configured.',
@@ -430,13 +440,12 @@ export async function dispatchWhatsappChannel(
     return finalizedWhatsappResult(claim)
   }
 
-  const attemptNumber = claim.created ? 1 : 2
-
-  await updateDelivery(db, {
+  const attempt = await startDeliveryAttempt(db, {
     bookingId: booking.bookingId,
     channel: 'whatsapp',
-    status: 'processing',
-    attempts: attemptNumber,
+    recipient,
+    provider: 'meta-whatsapp',
+    trigger: 'status_transition',
   })
 
   try {
@@ -445,11 +454,11 @@ export async function dispatchWhatsappChannel(
       recipientE164: recipient,
     })
 
-    await updateDelivery(db, {
+    await finalizeDeliveryAttempt(db, {
       bookingId: booking.bookingId,
       channel: 'whatsapp',
+      attemptId: attempt.attemptId,
       status: 'sent',
-      attempts: attemptNumber,
       providerMessageId: result.providerMessageId,
     })
 
@@ -458,7 +467,7 @@ export async function dispatchWhatsappChannel(
       idempotencyKey: claim.idempotencyKey,
       created: claim.created,
       providerMessageId: result.providerMessageId,
-      attempts: attemptNumber,
+      attempts: attempt.attemptNumber,
     })
 
     return {
@@ -470,11 +479,11 @@ export async function dispatchWhatsappChannel(
   } catch (error) {
     const { code, message } = sanitizeWhatsAppErrorForStorage(error)
 
-    await updateDelivery(db, {
+    await finalizeDeliveryAttempt(db, {
       bookingId: booking.bookingId,
       channel: 'whatsapp',
+      attemptId: attempt.attemptId,
       status: 'failed',
-      attempts: attemptNumber,
       errorCode: code,
       errorMessage: message,
     })
@@ -484,7 +493,7 @@ export async function dispatchWhatsappChannel(
       idempotencyKey: claim.idempotencyKey,
       created: claim.created,
       errorCode: code,
-      attempts: attemptNumber,
+      attempts: attempt.attemptNumber,
     })
 
     return {
