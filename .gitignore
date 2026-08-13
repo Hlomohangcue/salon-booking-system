@@ -29,8 +29,13 @@ dist-ssr
 *.sw?
 node_modules
 
+<<<<<<< HEAD
 # Firebase service account credentials — never commit
 service-account.json
 
 # Firebase Functions compiled build output
 functions/lib/
+=======
+# Firebase Admin SDK credentials
+service-account.json
+>>>>>>> cursor/phase-4-notifications

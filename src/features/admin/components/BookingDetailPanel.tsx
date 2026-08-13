@@ -3,6 +3,8 @@ import type { Booking } from '../../booking/types'
 import StatusBadge from './ui/StatusBadge'
 import Button from '../../../components/ui/Button'
 import { formatDisplayDate, formatTime12h } from '../../booking/utils/dateHelpers'
+import BookingNotificationPanel from '../notifications/BookingNotificationPanel'
+import { useBookingNotifications } from '../notifications/useBookingNotifications'
 
 /**
  * Action callbacks wired to the admin booking service. Firestore mutations are
@@ -60,6 +62,12 @@ export default function BookingDetailPanel({
   headerSlot,
 }: BookingDetailPanelProps) {
   const { confirm, cancel, complete, noShow } = actions
+  const showNotifications =
+    booking.status === 'confirmed' || booking.status === 'completed'
+  const notifications = useBookingNotifications(
+    booking.bookingId,
+    showNotifications,
+  )
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -90,6 +98,17 @@ export default function BookingDetailPanel({
         <DetailRow label="Notes" value={booking.notes || '—'} />
         <DetailRow label="Reference" value={booking.bookingId} />
       </dl>
+
+      <BookingNotificationPanel
+        booking={booking}
+        email={notifications.email}
+        whatsapp={notifications.whatsapp}
+        loading={notifications.loading}
+        error={notifications.error}
+        resendingChannel={notifications.resendingChannel}
+        resendError={notifications.resendError}
+        onResend={(channel) => void notifications.resend(channel)}
+      />
 
       {/* Actions */}
       <div className="px-5 py-4 border-t border-gray-100">

@@ -44,6 +44,7 @@ const EMPTY_SETTINGS: SalonSettings = {
   },
   notifications: {
     emailEnabled: false,
+    whatsappEnabled: false,
     smsPlaceholder: '',
     whatsappPlaceholder: '',
   },

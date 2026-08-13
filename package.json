@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "seed": "tsx scripts/seedFirestore.ts",
     "create-admin": "tsx scripts/create-admin.ts",
-    "deploy": "firebase deploy --only hosting,firestore",
+    "deploy": "firebase deploy --only hosting,firestore,storage,functions",
+    "build:functions": "npm run build --prefix functions",
+    "test:functions": "npm run test --prefix functions",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

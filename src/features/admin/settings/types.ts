@@ -66,9 +66,11 @@ export interface BusinessInfo {
 export interface NotificationSettings {
   /** Master toggle for email notifications. */
   emailEnabled: boolean
+  /** Master toggle for WhatsApp confirmation notifications. */
+  whatsappEnabled: boolean
   /** Placeholder — reserved for a future SMS provider integration. */
   smsPlaceholder: string
-  /** Placeholder — reserved for a future WhatsApp integration. */
+  /** @deprecated Legacy placeholder — use whatsappEnabled. */
   whatsappPlaceholder: string
 }
 

@@ -1,10 +1,11 @@
 // ─── Admin user types ───────────────────────────────────────────────────────
 
 /**
- * The salon's admin role. Only users with role === 'admin' may access the
- * admin dashboard and mutate bookings/services/settings/holidays.
+ * Application roles stored on users/{uid}.
+ * `admin` and `super_admin` may access the admin dashboard; `super_admin`
+ * is reserved for elevated operations that may be added in future phases.
  */
-export type UserRole = 'admin' | 'customer'
+export type UserRole = 'admin' | 'super_admin' | 'customer'
 
 /**
  * The shape of the user document stored in the `users` collection.

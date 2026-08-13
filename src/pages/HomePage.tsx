@@ -2,6 +2,8 @@
 import Button from '../components/ui/Button'
 import Container from '../components/ui/Container'
 import SectionTitle from '../components/ui/SectionTitle'
+import GalleryGrid from '../features/gallery/components/GalleryGrid'
+import { usePublishedGallery } from '../features/gallery/hooks/usePublishedGallery'
 import Card from '../components/ui/Card'
 
 const FEATURED_SERVICES = [
@@ -79,16 +81,11 @@ const TESTIMONIALS = [
   },
 ]
 
-const GALLERY_ITEMS = [
-  { bg: 'bg-purple-100' },
-  { bg: 'bg-amber-50' },
-  { bg: 'bg-purple-50' },
-  { bg: 'bg-gray-100' },
-  { bg: 'bg-rose-50' },
-  { bg: 'bg-indigo-50' },
-]
+const GALLERY_HOME_LIMIT = 6
 
 export default function HomePage() {
+  const gallery = usePublishedGallery(GALLERY_HOME_LIMIT)
+
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────── */}
@@ -203,17 +200,12 @@ export default function HomePage() {
             title="Our Work"
             subtitle="A glimpse of the transformations we create every day."
           />
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {GALLERY_ITEMS.map((item, i) => (
-              <div
-                key={i}
-                className={`${item.bg} rounded-xl aspect-square flex items-center justify-center`}
-                aria-label={`Gallery item ${i + 1}`}
-              >
-                <span className="text-gray-400 text-xs font-medium tracking-wide">Coming Soon</span>
-              </div>
-            ))}
-          </div>
+          <GalleryGrid
+            items={gallery.items}
+            loading={gallery.loading}
+            error={gallery.error}
+            skeletonCount={GALLERY_HOME_LIMIT}
+          />
         </Container>
       </section>
 
